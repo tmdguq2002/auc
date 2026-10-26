@@ -6,12 +6,12 @@
 
 공문서(시행문)와 내부 보고서를 대신 써 주는 Claude 스킬
 
-![Agent Skill](https://img.shields.io/badge/Agent%20Skill-auc--docs-5A4FCF)
-![HWPX](https://img.shields.io/badge/출력-HWPX%20(한글)-1F6FEB)
-![Python](https://img.shields.io/badge/Python-표준%20라이브러리만-3776AB?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-47%20passed-2EA44F)
+<picture><img src="https://img.shields.io/badge/Agent%20Skill-auc--docs-5A4FCF" alt="Agent Skill"></picture>
+<picture><img src="https://img.shields.io/badge/출력-HWPX%20(한글)-1F6FEB" alt="HWPX"></picture>
+<picture><img src="https://img.shields.io/badge/Python-표준%20라이브러리만-3776AB?logo=python&logoColor=white" alt="Python"></picture>
+<picture><img src="https://img.shields.io/badge/tests-47%20passed-2EA44F" alt="Tests"></picture>
 
-[빠른 시작](#-빠른-시작) · [사용 예시](#-사용-예시) · [지원 문서](#-지원-문서) · [개인정보](#-개인정보-보호) · [개발](#-개발)
+[빠른 시작](#-빠른-시작) · [사용 예시](#-사용-예시) · [지원 문서](#-지원-문서) · [개인정보](#-개인정보-보호)
 
 </div>
 
@@ -182,39 +182,6 @@ docs/                        설계 · 구현 계획 · 테스트 기록
 
 **동작 원리** — 실제 공사 문서에서 본문만 비운 서식을 두고, 그 안의 문단·표를 **원형(prototype)으로 복제해 글자만 바꿉니다.**
 그래서 글꼴·문단 모양·표 테두리가 원본과 같고, 결재란 같은 칸은 서식에 붙은 이름(`결재제목`, `직위.1` …)으로 정확히 채웁니다.
-
----
-
-## 🛠 개발
-
-```bash
-# 테스트
-python3 -m unittest discover tests -v
-
-# JSON으로 직접 생성 / 검사
-python3 skill/auc-docs/scripts/build_hwpx.py tests/fixtures/gongmun_futsal.json out/sample.hwpx
-python3 skill/auc-docs/scripts/check_privacy.py out/sample.hwpx
-
-# 미리보기 PNG (LibreOffice + H2Orestart 필요, 근사치)
-bash tools/render_preview.sh out/sample.hwpx
-
-# 스킬 ZIP 패키징
-cd skill && zip -r ../dist/auc-docs.zip auc-docs -x '*/__pycache__/*'
-```
-
-<details>
-<summary><b>어떻게 만들었나 — superpowers 방식</b></summary>
-
-[obra/superpowers](https://github.com/obra/superpowers)의 순서를 따랐습니다.
-
-1. **brainstorming** — 요구사항을 질문으로 정리 → [설계 문서](docs/2026-10-26-auc-docs-design.md)
-2. **writing-plans** — [구현 계획](docs/superpowers/plans/2026-10-26-auc-docs-skill.md) 8단계
-3. **writing-skills (TDD)**
-   - 🔴 [기준선](docs/superpowers/baseline.md): 스킬 없이 Claude는 질문 없이 쓰고, 붙임·법령을 지어내고, 실명을 옮김
-   - 🟢 [GREEN](docs/superpowers/green.md): 스킬 적용 후 6개 시나리오 모두 통과
-   - 🔁 리팩터 → 최종 코드 리뷰 → 회귀 테스트
-
-</details>
 
 ---
 
