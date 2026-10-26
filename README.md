@@ -28,10 +28,20 @@
 | 🚫 **지어내지 않습니다** | 날짜·붙임·법령 근거·수치는 자료나 답변에 있는 것만 |
 | 🔒 **개인정보를 다루지 않습니다** | 이름·전화·이메일은 묻지도 옮기지도 않고 자리표시로 |
 
-<div align="center">
-<img src="docs/images/sample-gongmun.png" width="520" alt="생성된 공문 예시">
-<br><sub>생성된 공문 예시 (<code>samples/gongmun_futsal.hwpx</code>, LibreOffice 렌더링)</sub>
-</div>
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/images/sample-gongmun.png" alt="공문서 예시"></td>
+<td align="center" width="33%"><img src="docs/images/sample-report-cover.png" alt="보고서 표지 예시"></td>
+<td align="center" width="33%"><img src="docs/images/sample-report-body.png" alt="보고서 본문 예시"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>공문서</b> · <code>samples/gongmun_futsal.hwpx</code></sub></td>
+<td align="center"><sub><b>보고서 표지</b> · <code>samples/report_tft.hwpx</code></sub></td>
+<td align="center"><sub><b>보고서 본문</b> · <code>samples/report_tft.hwpx</code></sub></td>
+</tr>
+</table>
+
+<div align="center"><sub>LibreOffice로 렌더링한 미리보기입니다. 한글에서는 글꼴·간격이 조금 다를 수 있습니다.</sub></div>
 
 ---
 
