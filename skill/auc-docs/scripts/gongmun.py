@@ -10,6 +10,7 @@ import re
 import hwpx_io as h
 
 NORMAL, EMPHASIS = '7', '22'
+BODY_PARA = '28'  # 본문 문단 모양(번호 '1.'에 맞춘 내어쓰기)
 SUB_LABELS = [
     lambda i: '가나다라마바사아자차카타파하'[i] + '.',
     lambda i: '%d)' % (i + 1),
@@ -33,6 +34,25 @@ def _required(spec, *keys):
             raise ValueError('필수 항목이 없습니다: "%s"' % k)
 
 
+def _numbered(spec):
+    """편람: 본문이 한 항목뿐이면(하위 항목 없이) 번호를 붙이지 않는다."""
+    texts = [b for b in spec['body'] if 'box' not in b]
+    return not (len(texts) == 1 and not texts[0].get('sub'))
+
+
+def _add_flat_body_style(header_xml):
+    """본문 문단 모양(28)을 복사해 내어쓰기를 없앤 문단 모양을 새로 넣고 그 id를 돌려준다."""
+    ids = [int(i) for i in re.findall(r'<hh:paraPr id="(\d+)"', header_xml)]
+    new_id = max(ids) + 1
+    pr = re.search(r'<hh:paraPr id="%s" .*?</hh:paraPr>' % BODY_PARA, header_xml, re.S).group()
+    pr = pr.replace('<hh:paraPr id="%s" ' % BODY_PARA, '<hh:paraPr id="%d" ' % new_id, 1)
+    pr = re.sub(r'<hc:intent value="-?\d+"', '<hc:intent value="0"', pr)
+    end = header_xml.index('</hh:paraProperties>')
+    header_xml = header_xml[:end] + pr + header_xml[end:]
+    header_xml = re.sub(r'<hh:paraProperties itemCnt="\d+"', '<hh:paraProperties itemCnt="%d"' % (len(ids) + 1), header_xml)
+    return header_xml, str(new_id)
+
+
 def _lines(spec):
     """본문을 ('para', runs) / ('box', title, items) 목록으로 펼친다."""
     lines, n = [], 0
@@ -47,6 +67,7 @@ def _lines(spec):
             lines.append(('para', [(NORMAL, label)] + _runs(it['text'])))
             subs(it.get('sub', []), level + 1)
 
+    numbered = _numbered(spec)
     for block in spec['body']:
         if 'box' in block:
             if not block['box'].get('items'):
@@ -54,7 +75,8 @@ def _lines(spec):
             lines.append(('box', block['box']['title'], block['box']['items']))
             continue
         n += 1
-        lines.append(('para', [(NORMAL, '%d. ' % n)] + _runs(block['text'])))
+        label = [(NORMAL, '%d. ' % n)] if numbered else []
+        lines.append(('para', label + _runs(block['text'])))
         subs(block.get('sub', []), 0)
 
     att = spec.get('attachments') or []
@@ -119,6 +141,8 @@ def build_gongmun(spec, template, out):
         extra = end_run if i == len(lines) - 1 else ''
         if i == 0:
             runs = _merge(line[1])
+            if runs[0][0] != NORMAL:  # 서식의 첫 run은 일반 글자 모양이라, 강조로 시작하면 빈 일반 run을 앞에 둔다
+                runs.insert(0, (NORMAL, ''))
             # 첫 줄은 머리 표·누름틀 시작과 같은 run 안에서 이어진다
             cut = p_first.index('</hp:fieldBegin></hp:ctrl>') + len('</hp:fieldBegin></hp:ctrl>')
             first = p_first[:cut] + '<hp:t>%s</hp:t></hp:run>' % h.escape(runs[0][1])
@@ -131,6 +155,14 @@ def build_gongmun(spec, template, out):
             if extra:
                 box = box[:-len('</hp:p>')] + extra + '</hp:p>'
             rendered.append(box)
+    if not _numbered(spec):
+        # 번호 없는 한 문단: 내어쓰기 없는 문단 모양으로 바꾼다(박스 등 표 안 문단은 그대로)
+        header_xml, flat = _add_flat_body_style(entries['Contents/header.xml'].decode('utf-8'))
+        entries = dict(entries, **{'Contents/header.xml': header_xml.encode('utf-8')})
+        tag = 'paraPrIDRef="%s"' % BODY_PARA
+        rendered = [p.replace(tag, 'paraPrIDRef="%s"' % flat, 1) if tag in p[:p.index('>')] else p
+                    for p in rendered]
+
     head_xml = rendered[0]
     head_xml = h.set_cell(head_xml, '수신', spec.get('receiver', '수신자참조'))
     head_xml = h.set_cell(head_xml, '경유', spec.get('via', ''))
@@ -138,6 +170,7 @@ def build_gongmun(spec, template, out):
     rendered[0] = head_xml
 
     foot = p_foot
+    foot = h.set_cell(foot, '발신명의', spec.get('sender') or '안양도시공사사장')
     foot = h.set_cell(foot, '각안수신처', ', '.join(spec.get('receivers', [])))
     for i in range(MAX_APPROVERS):
         names = spec.get('approvers', [])

@@ -49,3 +49,21 @@ class HwpxIoTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CellControlTest(unittest.TestCase):
+    """칸 안 첫 문단의 조판 부호(머리말·단 설정)는 글자를 바꿔도 남아야 한다."""
+
+    def test_set_cell_keeps_controls(self):
+        import xml.dom.minidom
+        for tpl in ('report.hwpx', 'report_b.hwpx'):
+            _, x = hwpx_io.read_section(os.path.join(ROOT, 'skill', 'auc-docs', 'templates', tpl))
+            s, e = hwpx_io._cell_span(x, '결재제목')
+            before = x[s:e]
+            y = hwpx_io.set_cell(x, '결재제목', '새 제목 & 확인')
+            s, e = hwpx_io._cell_span(y, '결재제목')
+            after = y[s:e]
+            for tag in ('<hp:colPr ', '<hp:header '):
+                self.assertEqual(before.count(tag), after.count(tag), (tpl, tag))
+            self.assertIn('새 제목 &amp; 확인', after)
+            xml.dom.minidom.parseString(y.encode('utf-8'))

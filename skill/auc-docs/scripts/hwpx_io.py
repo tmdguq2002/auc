@@ -20,17 +20,23 @@ def read_section(path):
     return entries, entries[SECTION].decode('utf-8')
 
 
-def write_hwpx(path, entries, section_xml):
-    """임시 파일에 쓰고 XML이 올바른지 확인한 뒤에만 path로 옮긴다."""
-    section_xml = unique_object_ids(section_xml)
-    xml.dom.minidom.parseString(section_xml.encode('utf-8'))
+def write_hwpx(path, entries, section_xml, more_sections=None):
+    """임시 파일에 쓰고 XML이 올바른지 확인한 뒤에만 path로 옮긴다.
+
+    more_sections: {'Contents/section1.xml': xml, ...} — 구역이 여럿인 서식(표지와 본문이 다른 구역)용.
+    """
+    sections = {SECTION: section_xml}
+    sections.update(more_sections or {})
+    for name in sections:
+        sections[name] = unique_object_ids(sections[name])
+        xml.dom.minidom.parseString(sections[name].encode('utf-8'))
     tmp = path + '.tmp'
     with zipfile.ZipFile(tmp, 'w') as z:
         for name, data in entries.items():
-            if name == SECTION:
-                data = section_xml.encode('utf-8')
+            if name in sections:
+                data = sections[name].encode('utf-8')
             elif name == 'Preview/PrvText.txt':
-                data = preview_text(section_xml).encode('utf-8')
+                data = '\r\n'.join(preview_text(x) for x in sections.values())[:1024].encode('utf-8')
             stored = name in ('mimetype', 'version.xml') or name.endswith('.png')
             z.writestr(zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0)), data,
                        compress_type=zipfile.ZIP_STORED if stored else zipfile.ZIP_DEFLATED)
@@ -94,12 +100,68 @@ def _cell_span(xml, name):
     return m.start(), xml.index('</hp:tc>', m.start())
 
 
-def set_sublist_paras(xml, start, end, paras_xml):
-    """xml[start:end] 안 첫 subList의 문단들을 paras_xml로 바꾼다."""
+def sublist_bounds(xml, start, end):
+    """xml[start:end](표 칸) 안 바깥 subList 내용의 (시작, 끝). 칸 안에 머리말처럼 중첩된 subList가 있어도 바깥 것."""
     s = xml.index('<hp:subList', start, end)
     s = xml.index('>', s) + 1
-    e = xml.index('</hp:subList>', s, end)
+    return s, xml.rindex('</hp:subList>', s, end)
+
+
+def set_sublist_paras(xml, start, end, paras_xml):
+    """xml[start:end] 안 바깥 subList의 문단들을 paras_xml로 바꾼다."""
+    s, e = sublist_bounds(xml, start, end)
     return xml[:s] + paras_xml + xml[e:]
+
+
+def _top_runs(para):
+    """문단의 최상위 run들(중첩된 머리말 안 run은 바깥 run에 포함)."""
+    runs, depth, start = [], 0, None
+    for m in re.finditer(r'<hp:run\b[^>]*/>|<hp:run\b[^>]*>|</hp:run>', para):
+        tag = m.group()
+        if tag.endswith('/>'):
+            if depth == 0:
+                runs.append(tag)
+        elif tag.startswith('</'):
+            depth -= 1
+            if depth == 0:
+                runs.append(para[start:m.end()])
+        else:
+            if depth == 0:
+                start = m.start()
+            depth += 1
+    return runs
+
+
+def control_runs(para):
+    """문단에서 조판 부호(머리말·단 설정·누름틀 등)만 남긴 run들. 같은 run의 글자는 버린다."""
+    out = []
+    for run in _top_runs(para):
+        if '<hp:ctrl>' in run:
+            end = run.rindex('</hp:ctrl>') + len('</hp:ctrl>')
+            out.append(run[:end] + '</hp:run>')
+    return ''.join(out)
+
+
+def replace_para_text(para, runs):
+    """문단의 글자를 runs로 바꾸되 조판 부호 run은 앞에 그대로 둔다."""
+    para = strip_linesegs(para)
+    open_tag = re.match(r'<hp:p\b[^>]*>', para).group()
+    return open_tag + control_runs(para) + ''.join(run_xml(c, t) for c, t in runs) + '</hp:p>'
+
+
+def cell_paras(xml, start, end):
+    """표 칸 xml[start:end]의 최상위 문단 목록."""
+    s, e = sublist_bounds(xml, start, end)
+    return split_section(xml[s:e])[1]
+
+
+def fill_cell(xml, start, end, runs):
+    """표 칸의 내용을 runs 한 문단으로. 첫 문단의 조판 부호는 남긴다. runs가 비면 빈 run 하나."""
+    first = cell_paras(xml, start, end)[0]
+    if not runs:
+        run = re.search(r'<hp:run charPrIDRef="(\d+)"', first)
+        runs = [(run.group(1) if run else '0', '')]
+    return set_sublist_paras(xml, start, end, replace_para_text(first, runs))
 
 
 def first_para_proto(xml_fragment):
@@ -110,10 +172,12 @@ def first_para_proto(xml_fragment):
 
 
 def set_cell(xml, name, text):
-    """이름 붙은 표 칸(<hp:tc name=...>)의 내용을 text 한 문단으로 바꾼다."""
+    """이름 붙은 표 칸(<hp:tc name=...>)의 내용을 text 한 문단으로 바꾼다(글자 모양은 칸의 첫 글자 run)."""
     start, end = _cell_span(xml, name)
-    proto, char_pr = first_para_proto(xml[start:end])
-    return set_sublist_paras(xml, start, end, clone_para(proto, [(char_pr, text)]))
+    first = cell_paras(xml, start, end)[0]
+    texts = [r for r in _top_runs(first) if '<hp:ctrl>' not in r]
+    run = re.search(r'<hp:run charPrIDRef="(\d+)"', texts[0] if texts else first)
+    return fill_cell(xml, start, end, [(run.group(1) if run else '0', text)])
 
 
 def tc_spans(xml):
@@ -150,8 +214,7 @@ def unique_object_ids(xml):
 
 def set_tc_text(tc, runs):
     """표 칸 하나의 내용을 runs 한 문단으로. runs가 비면 칸의 글자 모양만 가진 빈 run."""
-    proto, char_pr = first_para_proto(tc)
-    return set_sublist_paras(tc, 0, len(tc), clone_para(proto, runs or [(char_pr, '')]))
+    return fill_cell(tc, 0, len(tc), runs)
 
 
 def column_widths(header, rows, total):
@@ -163,8 +226,11 @@ def column_widths(header, rows, total):
     return widths
 
 
-def build_table(proto, header, rows, total, head_char, body_char):
-    """원형 표 문단(머리행·본문행 원형)을 복제해 header/rows 크기의 표를 만든다."""
+def build_table(proto, header, rows, total, head_char, body_char, head_tcs=None, body_tcs=None):
+    """원형 표 문단(머리행·본문행 원형)을 복제해 header/rows 크기의 표를 만든다.
+
+    head_tcs/body_tcs: 열마다 쓸 원형 칸 XML 목록. 없으면 원형 표의 0행·1행 칸을 쓴다.
+    """
     n = len(header)
     if n == 0 or any(len(r) != n for r in rows):
         raise ValueError('표의 각 행은 머리행과 같은 열 수여야 합니다')
@@ -174,8 +240,8 @@ def build_table(proto, header, rows, total, head_char, body_char):
     tbl = p[t0:t1]
     spans = tc_spans(tbl)
     # 열마다 원형 표의 같은 열 칸을 원형으로 쓴다(열별 정렬·문단 모양 유지). 열이 더 많으면 마지막 열.
-    head_tcs = [tbl[s:e] for s, e in spans if 'rowAddr="0"' in tbl[s:e]]
-    body_tcs = [tbl[s:e] for s, e in spans if 'rowAddr="1"' in tbl[s:e]]
+    head_tcs = head_tcs or [tbl[s:e] for s, e in spans if 'rowAddr="0"' in tbl[s:e]]
+    body_tcs = body_tcs or [tbl[s:e] for s, e in spans if 'rowAddr="1"' in tbl[s:e]]
     head_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', head_tcs[0]).group(1))
     body_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', body_tcs[0]).group(1))
     widths = column_widths(header, rows, total)
@@ -183,6 +249,7 @@ def build_table(proto, header, rows, total, head_char, body_char):
     def cell(proto_tc, text, col, row, height, char):
         tc = set_tc_text(proto_tc, [(char, '' if text is None else str(text))])
         tc = re.sub(r'<hp:cellAddr [^>]*/>', '<hp:cellAddr colAddr="%d" rowAddr="%d"/>' % (col, row), tc)
+        tc = re.sub(r'<hp:cellSpan [^>]*/>', '<hp:cellSpan colSpan="1" rowSpan="1"/>', tc)
         return re.sub(r'<hp:cellSz [^>]*/>', '<hp:cellSz width="%d" height="%d"/>' % (widths[col], height), tc)
 
     def proto(tcs, c):

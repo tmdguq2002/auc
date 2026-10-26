@@ -28,15 +28,10 @@ def _with_prefix(prefix, value, normal, emphasis):
 
 
 def _replace_text_runs(cell, runs):
-    """칸 안 첫 문단에서 글자 run만 바꾸고 조판 부호(ctrl) run은 남긴다."""
-    s = cell.index('<hp:p ')
-    e = cell.index('</hp:p>', s) + len('</hp:p>')
-    para = h.strip_linesegs(cell[s:e])
-    kept = [r for r in re.findall(r'<hp:run\b[^>]*/>|<hp:run\b[^>]*>.*?</hp:run>', para, re.S)
-            if '<hp:t' not in r and '<hp:ctrl>' in r]
-    open_tag = re.match(r'<hp:p\b[^>]*>', para).group()
-    new = open_tag + ''.join(kept) + ''.join(h.run_xml(c, t) for c, t in runs) + '</hp:p>'
-    return cell[:s] + new + cell[e:]
+    """칸 안 첫 문단의 글자만 바꾸고 조판 부호 run과 나머지 문단은 둔다."""
+    first = h.cell_paras(cell, 0, len(cell))[0]
+    i = cell.index(first)
+    return cell[:i] + h.replace_para_text(first, runs) + cell[i + len(first):]
 
 
 def _heading(proto, n, title):

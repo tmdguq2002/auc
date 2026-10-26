@@ -8,6 +8,7 @@ TEMPLATES = os.path.join(ROOT, 'skill', 'auc-docs', 'templates')
 
 FORBIDDEN = [
     'shkwon@', '031-389-5354', '031-389-5249', '안전감사팀-85', '전략기획부-4953',
+    '이동인', '김상오', '이영욱', '이현호', '오금재', '이나래', '박홍진', '신송식', '김정량', '전략기획부-4358',
     '이 주 민', '서동선', '권승협', '강주호', '최재형', '김창식', '전영민', '이강민',
 ]
 
@@ -23,14 +24,14 @@ def all_text(path):
 
 class TemplateTest(unittest.TestCase):
     def test_templates_have_no_personal_info(self):
-        for kind in ('gongmun', 'report', 'yoji'):
+        for kind in ('gongmun', 'report', 'yoji', 'report_b'):
             text = all_text(os.path.join(TEMPLATES, kind + '.hwpx'))
             for s in FORBIDDEN:
                 self.assertNotIn(s, text, '%s: %s' % (kind, s))
             self.assertIsNone(re.search(r'\b0\d{1,2}-\d{3,4}-\d{4}\b', text), kind)
 
     def test_template_size(self):
-        for kind in ('report', 'yoji'):
+        for kind in ('report', 'yoji', 'report_b'):
             self.assertLess(os.path.getsize(os.path.join(TEMPLATES, kind + '.hwpx')), 500 * 1024, kind)
 
     def test_yoji_photos_removed_consistently(self):
@@ -42,12 +43,15 @@ class TemplateTest(unittest.TestCase):
         self.assertFalse(any(n.startswith('BinData/image3') or n.startswith('BinData/image4') for n in names))
 
     def test_templates_open_as_zip(self):
-        for kind in ('gongmun', 'report', 'yoji'):
+        for kind in ('gongmun', 'report', 'yoji', 'report_b'):
             with zipfile.ZipFile(os.path.join(TEMPLATES, kind + '.hwpx')) as z:
                 first = z.infolist()[0]
                 self.assertEqual(first.filename, 'mimetype')
                 self.assertEqual(first.compress_type, zipfile.ZIP_STORED)
                 self.assertEqual(z.read('mimetype'), b'application/hwp+zip')
+                xmls = ''.join(z.read(n).decode('utf-8') for n in z.namelist() if n.startswith('Contents/'))
+                for ref in set(re.findall(r'binaryItemIDRef="(\w+)"', xmls)):
+                    self.assertTrue(any(n.startswith('BinData/%s.' % ref) for n in z.namelist()), (kind, ref))
                 for name in z.namelist():
                     if name.startswith('BinData/'):
                         self.assertIn(name, z.read('Contents/content.hpf').decode('utf-8'))

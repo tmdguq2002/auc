@@ -1,6 +1,6 @@
 """업로드된 실제 문서에서 개인정보·문서고유값을 지워 스킬용 서식 HWPX를 만든다.
 
-사용: python3 tools/make_templates.py <원본.hwpx> <서식.hwpx> --kind gongmun|report|yoji
+사용: python3 tools/make_templates.py <원본.hwpx> <서식.hwpx> --kind gongmun|report|yoji|report_b
 스킬 ZIP에는 포함하지 않는다.
 """
 import argparse
@@ -22,7 +22,13 @@ REPLACE = {
         ('<hp:t>2026. 10. 26.</hp:t>', '<hp:t></hp:t>'),
     ],
     'yoji': [],
+    'report_b': [
+        ('<hp:t>전략기획부-4358</hp:t>', '<hp:t>○○부-○○</hp:t>'),
+        ('<hp:t>2026. 9. 16.</hp:t>', '<hp:t></hp:t>'),
+    ],
 }
+# 문장 안에 섞인 이름(참석자 명단 칸 등)
+INLINE_NAMES = ['이동인', '김상오', '최재형', '이영욱', '이현호', '오금재', '이나래', '박홍진', '신송식', '김정량']
 NAMES = ['이 주 민', '서동선', '권승협', '강주호', '최재형', '김창식', '전영민', '이강민']
 PHOTO_IMAGES = ['image1', 'image2', 'image3', 'image4']
 YOJI_PHOTOS = ['image3', 'image4']  # 요지 사진 칸의 사진(BMP, 약 4MB)
@@ -41,6 +47,9 @@ def scrub(text, kind):
         text = text.replace(old, new)
     for n in NAMES:
         text = text.replace('<hp:t>%s</hp:t>' % n, '<hp:t>○○○</hp:t>')
+    if kind == 'report_b':
+        for n in INLINE_NAMES:
+            text = text.replace(n, '○○○')
     text = PHONE.sub('031-389-○○○○', text)
     text = EMAIL.sub('○○○@auc.or.kr', text)
     return text
@@ -57,16 +66,16 @@ def make(src, dst, kind):
     out = []
     section = ''
     for name, data in items:
-        if kind == 'report' and any(name == 'BinData/%s.jpg' % i for i in PHOTO_IMAGES):
+        if kind in ('report', 'report_b') and any(name.startswith('BinData/%s.' % i) for i in PHOTO_IMAGES):
             continue
         if kind == 'yoji' and any(name.startswith('BinData/%s.' % i) for i in YOJI_PHOTOS):
             continue
         if name.endswith(('.xml', '.hpf', '.txt', '.rdf')):
             text = scrub(data.decode('utf-8'), kind)
-            if kind == 'report' and name == 'Contents/header.xml':
+            if kind in ('report', 'report_b') and name == 'Contents/header.xml':
                 # 사진대지 칸 배경 사진 제거 -> 빈 칸
                 text = re.sub(r'<hc:fillBrush><hc:imgBrush mode="TOTAL"><hc:img binaryItemIDRef="image[1-4]"[^>]*/></hc:imgBrush></hc:fillBrush>', '', text)
-            if kind == 'report' and name == 'Contents/content.hpf':
+            if kind in ('report', 'report_b') and name == 'Contents/content.hpf':
                 text = re.sub(r'<opf:item id="image[1-4]"[^>]*/>', '', text)
             if kind == 'yoji' and name == 'Contents/section0.xml':
                 # 사진 칸의 그림 개체를 지우고 빈 run만 남긴다
@@ -91,6 +100,6 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('src')
     ap.add_argument('dst')
-    ap.add_argument('--kind', choices=['gongmun', 'report', 'yoji'], required=True)
+    ap.add_argument('--kind', choices=['gongmun', 'report', 'yoji', 'report_b'], required=True)
     a = ap.parse_args()
     make(a.src, a.dst, a.kind)

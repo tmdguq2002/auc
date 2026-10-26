@@ -66,6 +66,7 @@ class GongmunTest(unittest.TestCase):
         self.assertEqual(xml.count('<hp:fieldEnd'), 1)
         lines = body_lines(xml)
         self.assertEqual(lines[-1], '붙임  회의 개최 계획 & 참석 명단 1부.  끝.')
+        self.assertFalse(lines[0].startswith('1.'))
         self.assertIn('&amp; 참석', xml)
         self.assertIn('부분공개', hwpx_io.para_text(paras[-1]))
 
@@ -98,6 +99,51 @@ class GongmunTest(unittest.TestCase):
         others = [hwpx_io.para_text(c) for c in cells if 'colSpan="3"' not in c]
         self.assertEqual(sorted(t for t in others if t), ['<주요 점검 사항>'])
         self.assertNotIn('인조잔디구장', hwpx_io.para_text(box))
+
+    def test_sender_department_head(self):
+        spec = load('gongmun_one_item.json')
+        spec['sender'] = '전략기획부장'
+        foot = hwpx_io.split_section(build(spec))[1][-1]
+        start = foot.index('name="발신명의"')
+        self.assertIn('전략기획부장', hwpx_io.para_text(foot[start:foot.index('</hp:tc>', start)]))
+        self.assertNotIn('안양도시공사사장', hwpx_io.para_text(foot))
+
+    def test_default_sender(self):
+        foot = hwpx_io.split_section(build(load('gongmun_futsal.json')))[1][-1]
+        self.assertIn('안양도시공사사장', hwpx_io.para_text(foot))
+
+    def test_single_paragraph_has_no_number(self):
+        spec = load('gongmun_one_item.json')
+        spec['attachments'] = []
+        lines = body_lines(build(spec))
+        self.assertEqual(lines, ['2026. 11. 3.(화) 14:00 대회의실 사용에 협조하여 주시기 바랍니다.  끝.'])
+
+    def test_single_paragraph_has_no_hanging_indent(self):
+        import zipfile
+        spec = load('gongmun_one_item.json')
+        out = os.path.join(tempfile.mkdtemp(), 'o.hwpx')
+        build_gongmun(spec, TEMPLATE, out)
+        with zipfile.ZipFile(out) as z:
+            head = z.read('Contents/header.xml').decode('utf-8')
+            xml = z.read('Contents/section0.xml').decode('utf-8')
+        paras = hwpx_io.split_section(xml)[1]
+        body_ids = {re.search(r'paraPrIDRef="(\d+)"', p).group(1) for p in paras[:-1]}
+        self.assertEqual(len(body_ids), 1)
+        pid = body_ids.pop()
+        pr = re.search(r'<hh:paraPr id="%s" .*?</hh:paraPr>' % pid, head, re.S).group()
+        self.assertEqual(set(re.findall(r'<hc:intent value="(-?\d+)"', pr)), {'0'})
+        self.assertEqual(head.count('<hh:paraPr id='), int(re.search(r'<hh:paraProperties itemCnt="(\d+)"', head).group(1)))
+
+    def test_numbered_body_keeps_hanging_indent(self):
+        xml = build(load('gongmun_futsal.json'))
+        self.assertIn('paraPrIDRef="28"', hwpx_io.split_section(xml)[1][1])
+
+    def test_single_paragraph_starting_with_emphasis(self):
+        spec = load('gongmun_one_item.json')
+        spec['attachments'] = []
+        spec['body'][0]['text'] = [['9.14.(월)까지', True], [' 제출하여 주시기 바랍니다.', False]]
+        xml = build(spec)
+        self.assertIn('<hp:run charPrIDRef="22"><hp:t>9.14.(월)까지</hp:t></hp:run>', xml)
 
     def test_emphasis(self):
         xml = build(load('gongmun_futsal.json'))
