@@ -1,49 +1,223 @@
-# 안양도시공사 문서작성 스킬 (auc-docs)
+<div align="center">
 
-메모·PDF·HWPX·회의록을 주면 Claude가 부족한 내용을 **한 번에 하나씩 질문**한 뒤,
-공사 서식 그대로의 **공문서(시행문)** 또는 **내부 보고서** HWPX 파일을 만들어 줍니다.
+# 📄 안양도시공사 문서작성 스킬
 
-- 사실(날짜·수신·붙임·근거·수치)은 지어내지 않고 묻습니다. 붙임은 항상 확인합니다.
-- 개인정보(이름·전화·이메일)는 묻지도 옮기지도 않고 `○○○`, `031-389-○○○○`, `○○○@auc.or.kr` 로 남깁니다.
-  한글에서 직접 채우세요. 결과물은 `check_privacy.py`로 자동 검사합니다.
+**메모 한 줄 → 질문 몇 개 → 공사 서식 그대로의 HWPX**
 
-## 설치 — claude.ai (웹·앱)
+공문서(시행문)와 내부 보고서를 대신 써 주는 Claude 스킬
 
-1. `dist/auc-docs.zip` 을 받습니다.
-2. claude.ai → 설정 → 기능(Capabilities) → 스킬 → 스킬 업로드 → ZIP 선택.
-   (코드 실행 기능이 켜져 있어야 합니다.)
-3. 대화에서 "안양도시공사 공문 써줘", "회의 결과보고서 만들어줘" 처럼 요청하면 스킬이 동작합니다.
+![Agent Skill](https://img.shields.io/badge/Agent%20Skill-auc--docs-5A4FCF)
+![HWPX](https://img.shields.io/badge/출력-HWPX%20(한글)-1F6FEB)
+![Python](https://img.shields.io/badge/Python-표준%20라이브러리만-3776AB?logo=python&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-47%20passed-2EA44F)
 
-팀 공유: 조직(Team/Enterprise) 플랜이면 관리자가 조직 스킬로 올려 모두가 쓸 수 있습니다.
-개인 플랜이면 각자 ZIP을 올립니다.
+[빠른 시작](#-빠른-시작) · [사용 예시](#-사용-예시) · [지원 문서](#-지원-문서) · [개인정보](#-개인정보-보호) · [개발](#-개발)
 
-## ChatGPT에서 쓰기
+</div>
 
-같은 ZIP(Agent Skills 형식)을 ChatGPT의 스킬 기능에 올려 보세요(이 환경에서 직접 확인하지 못했습니다).
-안 되면 **커스텀 GPT**를 만들어:
-- 지침(Instructions)에 `SKILL.md` 본문과 `reference/*.md` 내용을 붙여 넣고,
-- 지식(Knowledge)에 `scripts/*.py`, `templates/*.hwpx` 를 올리고,
-- "코드 인터프리터"를 켭니다.
+---
 
-## 구성
+## ✨ 이런 일을 합니다
+
+| | |
+|---|---|
+| 📥 **무엇이든 넣으세요** | 메모, PDF, HWPX, 회의록 — 있는 자료 그대로 |
+| 💬 **하나씩 물어봅니다** | 빠진 내용(수신, 일정, 붙임, 어조…)을 한 번에 하나씩 질문 |
+| ✅ **쓰기 전에 확인합니다** | "이렇게 쓰겠습니다" 요약을 보여 주고 승인 후 생성 |
+| 🏢 **공사 서식 그대로** | 실제 기안문·보고서 서식을 틀로 써서 글꼴·표·결재란이 원본과 동일 |
+| 🚫 **지어내지 않습니다** | 날짜·붙임·법령 근거·수치는 자료나 답변에 있는 것만 |
+| 🔒 **개인정보를 다루지 않습니다** | 이름·전화·이메일은 묻지도 옮기지도 않고 자리표시로 |
+
+<div align="center">
+<img src="docs/images/sample-gongmun.png" width="520" alt="생성된 공문 예시">
+<br><sub>생성된 공문 예시 (<code>samples/gongmun_futsal.hwpx</code>, LibreOffice 렌더링)</sub>
+</div>
+
+---
+
+## 🚀 빠른 시작
+
+### claude.ai (웹·앱)
+
+1. [`dist/auc-docs.zip`](dist/auc-docs.zip) 을 내려받습니다.
+2. **claude.ai → 설정 → 기능 → 스킬 → 스킬 업로드** 에서 ZIP을 선택합니다.
+3. **코드 실행** 기능이 켜져 있는지 확인합니다.
+4. 대화창에 요청합니다.
 
 ```
-auc-docs/
-  SKILL.md               절차·개인정보·합리화 차단
-  reference/gongmun.md   공문 규칙, 질문 목록, JSON 예시
-  reference/report.md    보고서 규칙, 질문 목록, JSON 예시
-  templates/*.hwpx       공사 서식(개인정보 제거)
-  scripts/build_hwpx.py  JSON → HWPX
-  scripts/check_privacy.py  개인정보 검사
+풋살장에서 강습 중에 못 때문에 회원이 다쳤어.
+체육사업부들한테 안전점검 하라는 공문 써줘. 우리는 안전감사팀이야.
 ```
-Python 표준 라이브러리만 사용합니다.
 
-## 개발
+> **팀에서 함께 쓰기** — Team/Enterprise 플랜이면 관리자가 조직 스킬로 한 번만 올리면 됩니다.
+> 개인 플랜이면 각자 ZIP을 올려 주세요.
+
+### ChatGPT
+
+같은 ZIP(Agent Skills 표준 형식)을 ChatGPT 스킬 기능에 올려 보세요. *(동작 여부는 아직 확인되지 않았습니다.)*
+안 되면 **커스텀 GPT**로 쓸 수 있습니다.
+
+<details>
+<summary>커스텀 GPT 설정 방법</summary>
+
+1. **지침(Instructions)** 에 `SKILL.md` 본문과 `reference/gongmun.md`, `reference/report.md` 내용을 붙여 넣습니다.
+2. **지식(Knowledge)** 에 `scripts/*.py`, `templates/*.hwpx` 를 올립니다.
+3. **코드 인터프리터** 를 켭니다.
+
+</details>
+
+---
+
+## 💬 사용 예시
+
+```mermaid
+flowchart LR
+    A[📥 자료<br>메모·PDF·HWPX] --> B[💬 질문<br>한 번에 하나씩]
+    B --> C{📎 붙임 확인}
+    C --> D[✅ 요약 확인<br>'이렇게 쓰겠습니다']
+    D --> E[⚙️ HWPX 생성]
+    E --> F[🔒 개인정보 검사]
+    F --> G[📄 파일 전달<br>+ 채울 칸 목록]
+```
+
+<details open>
+<summary><b>대화 흐름 예시</b></summary>
+
+> **👤 직원** 2026년 하반기 직원 교육 일정 안내 공문 써줘. 11월 12일, 13일 이틀이고 장소는 대회의실, 수신은 전 부서.
+>
+> **🤖 Claude** 공사 서식에 맞추려면 몇 가지를 더 여쭤봐야 합니다. 하나씩 여쭙겠습니다.
+> **첫 번째 질문입니다. 어떤 교육인가요? 교육명과 하루 교육 시간을 알려 주세요.**
+>
+> **👤 직원** 청렴·직장 내 괴롭힘 예방교육, 14:00~16:00, 같은 교육 이틀 반복이라 하루만 골라 참석
+>
+> **🤖 Claude** *(발신 부서, 결재선, 어조를 차례로 질문)*
+>
+> **🤖 Claude** 만들기 전에 확인해 주세요. **이렇게 쓰겠습니다** — 제목 / 수신 / 본문 요지 / 강조 / **붙임: 없음** / 결재선 …
+> 붙임으로 넣을 문서가 없고 위 내용이 맞으면 "좋아"라고 답해 주세요.
+>
+> **👤 직원** 좋아
+>
+> **🤖 Claude** 📄 `교육일정_안내.hwpx` — 한글에서 채울 칸: 담당자 이름·전화·이메일, 문서번호, 시행일자
+
+</details>
+
+**급할 때** — "질문하지 말고 바로 써줘"라고 하면 바로 만듭니다. 대신 모르는 날짜·부서는 `○○`로 비워 두고
+**채워야 할 칸 목록**을 함께 드립니다.
+
+---
+
+## 📑 지원 문서
+
+<table>
+<tr>
+<th width="50%">📨 공문서 (시행문)</th>
+<th width="50%">📊 내부 보고서</th>
+</tr>
+<tr valign="top">
+<td>
+
+- 표어·로고·기관명, 수신·경유·제목
+- 본문 `1.` → `가.` → `1)` → `가)` 자동 번호
+- 핵심 문구 **굵게+밑줄**
+- `<주요 점검 사항>` 박스
+- **붙임** `붙임  1. ○○ 1부.` 정렬
+- `  끝.` 위치 자동 처리
+- 발신명의, 수신자, 결재·협조란, 시행 정보
+
+</td>
+<td>
+
+- 표지: 문서번호·결재일자·공개구분, 결재·협조란
+- 목적 한 문장 (`~하고자 함.`)
+- 대제목 `Ⅰ Ⅱ Ⅲ …` 자동
+- 항목 체계 ` 1.` → `○` → `-` → `※`
+- 표 (열 너비 자동), 사진대지 칸
+- 향후계획 일정 `○ 내용 ······ 2026.11월`
+- 개조식 문체 (`~공유`, `~추진`)
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🔒 개인정보 보호
+
+| 항목 | 처리 |
+|---|---|
+| 사람 이름 | 묻지 않음 · 자료에 있어도 `○○○` |
+| 전화·휴대폰 | 묻지 않음 · `031-389-○○○○` |
+| 이메일 | 묻지 않음 · `○○○@auc.or.kr` |
+| 참석자 표 | 부서·직급만, 성명은 `○○○` |
+| 직위·부서명 | 개인정보 아님 → 그대로 사용 (★담당자, 안전감사팀장 …) |
+
+생성된 파일은 `check_privacy.py`가 자동으로 검사합니다.
+전화번호(괄호·국제번호·붙여쓰기 포함), 이메일, `담당자: 홍길동` 같은 표기, 표의 성명 열까지 확인합니다.
+
+---
+
+## 🗂 구성
+
+```
+skill/auc-docs/              ← claude.ai에 올리는 스킬 (dist/auc-docs.zip)
+├── SKILL.md                 질문 절차 · 지어내기 금지 · 개인정보 규칙
+├── reference/
+│   ├── gongmun.md           공문 작성 규칙 · 질문 목록 · JSON 예시
+│   └── report.md            보고서 작성 규칙 · 질문 목록 · JSON 예시
+├── templates/
+│   ├── gongmun.hwpx         공문 서식 (개인정보 제거)
+│   └── report.hwpx          보고서 서식 (개인정보·사진 제거)
+└── scripts/
+    ├── build_hwpx.py        JSON → HWPX
+    ├── gongmun.py           공문 생성
+    ├── report.py            보고서 생성
+    ├── hwpx_io.py           HWPX 읽기·쓰기, 원형 문단 복제
+    └── check_privacy.py     개인정보 검사
+
+samples/                     생성 예시 HWPX
+tests/                       단위 테스트 + 행동 시나리오
+tools/                       서식 정리 · 렌더링 미리보기 (개발용)
+docs/                        설계 · 구현 계획 · 테스트 기록
+```
+
+**동작 원리** — 실제 공사 문서에서 본문만 비운 서식을 두고, 그 안의 문단·표를 **원형(prototype)으로 복제해 글자만 바꿉니다.**
+그래서 글꼴·문단 모양·표 테두리가 원본과 같고, 결재란 같은 칸은 서식에 붙은 이름(`결재제목`, `직위.1` …)으로 정확히 채웁니다.
+
+---
+
+## 🛠 개발
 
 ```bash
-python3 -m unittest discover tests -v      # 단위 테스트
-python3 skill/auc-docs/scripts/build_hwpx.py tests/fixtures/gongmun_futsal.json samples/sample.hwpx
-cd skill && zip -r ../dist/auc-docs.zip auc-docs -x '*/__pycache__/*'   # 패키징
+# 테스트
+python3 -m unittest discover tests -v
+
+# JSON으로 직접 생성 / 검사
+python3 skill/auc-docs/scripts/build_hwpx.py tests/fixtures/gongmun_futsal.json out/sample.hwpx
+python3 skill/auc-docs/scripts/check_privacy.py out/sample.hwpx
+
+# 미리보기 PNG (LibreOffice + H2Orestart 필요, 근사치)
+bash tools/render_preview.sh out/sample.hwpx
+
+# 스킬 ZIP 패키징
+cd skill && zip -r ../dist/auc-docs.zip auc-docs -x '*/__pycache__/*'
 ```
 
-설계·계획·테스트 기록: `docs/`
+<details>
+<summary><b>어떻게 만들었나 — superpowers 방식</b></summary>
+
+[obra/superpowers](https://github.com/obra/superpowers)의 순서를 따랐습니다.
+
+1. **brainstorming** — 요구사항을 질문으로 정리 → [설계 문서](docs/2026-10-26-auc-docs-design.md)
+2. **writing-plans** — [구현 계획](docs/superpowers/plans/2026-10-26-auc-docs-skill.md) 8단계
+3. **writing-skills (TDD)**
+   - 🔴 [기준선](docs/superpowers/baseline.md): 스킬 없이 Claude는 질문 없이 쓰고, 붙임·법령을 지어내고, 실명을 옮김
+   - 🟢 [GREEN](docs/superpowers/green.md): 스킬 적용 후 6개 시나리오 모두 통과
+   - 🔁 리팩터 → 최종 코드 리뷰 → 회귀 테스트
+
+</details>
+
+---
+
+<div align="center">
+<sub>⚠️ 결과물은 반드시 한글에서 열어 확인한 뒤 기안하세요. 문서번호·시행일자는 기안 시스템에서 정해집니다.</sub>
+</div>
