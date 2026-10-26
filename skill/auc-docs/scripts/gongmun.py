@@ -89,10 +89,9 @@ def _merge(runs):
 
 def _box(proto, title, items):
     x = proto.replace('&lt;주요 점검 사항&gt;', h.escape('<%s>' % title))
-    first = x.index('<hp:p ', x.index('rowAddr="1"'))
-    start = x.rindex('<hp:tc ', 0, first)
-    end = x.index('</hp:tc>', first)
-    p_proto, _ = h.first_para_proto(x[first:end])
+    # 항목 칸 = 맨 아래 가로 전체(colSpan=3) 칸. cellAddr는 칸 내용 뒤에 오므로 위치로 찾지 않는다.
+    start, end = next((s, e) for s, e in h.tc_spans(x) if 'colSpan="3"' in x[s:e])
+    p_proto, _ = h.first_para_proto(x[start:end])
     x = h.set_sublist_paras(x, start, end, ''.join(h.clone_para(p_proto, _runs(it)) for it in items))
     # 항목 수에 맞춰 칸·표 높이 조정(원본: 3항목 6171)
     new_h = max(1, len(items)) * 6171 // 3

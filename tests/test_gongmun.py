@@ -86,6 +86,19 @@ class GongmunTest(unittest.TestCase):
                          ['1. 2026. 11. 3.(화) 14:00 대회의실 사용에 협조하여 주시기 바랍니다.',
                           '가. 일시: 2026. 11. 3.', '1) 세부', '나. 장소: 대회의실  끝.'])
 
+    def test_box_items_in_full_width_cell(self):
+        spec = load('gongmun_futsal.json')
+        spec['body'][2]['box']['items'] = ['새 항목 하나', '새 항목 둘']
+        xml = build(spec)
+        box = [p for p in hwpx_io.split_section(xml)[1] if '주요 점검 사항' in hwpx_io.para_text(p)][0]
+        cells = re.findall(r'<hp:tc\b.*?</hp:tc>', box, re.S)
+        texts = {re.search(r'colSpan="(\d+)" rowSpan="(\d+)"', c).groups(): hwpx_io.para_text(c) for c in cells}
+        full = [hwpx_io.para_text(c) for c in cells if 'colSpan="3"' in c]
+        self.assertEqual(full, ['새 항목 하나새 항목 둘'])
+        others = [hwpx_io.para_text(c) for c in cells if 'colSpan="3"' not in c]
+        self.assertEqual(sorted(t for t in others if t), ['<주요 점검 사항>'])
+        self.assertNotIn('인조잔디구장', hwpx_io.para_text(box))
+
     def test_emphasis(self):
         xml = build(load('gongmun_futsal.json'))
         self.assertRegex(xml, r'<hp:run charPrIDRef="22"><hp:t>유사 사고 방지를')
