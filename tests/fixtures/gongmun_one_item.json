@@ -1,0 +1,6 @@
+{"type": "gongmun", "receiver": "총무팀장", "via": "",
+ "title": "회의실 사용 협조 요청",
+ "body": [{"text": [["2026. 11. 3.(화) 14:00 대회의실 사용에 협조하여 주시기 바랍니다.", false]]}],
+ "attachments": ["회의 개최 계획 & 참석 명단"],
+ "receivers": [], "approvers": ["★담당자", "전략기획부장"], "cooperators": ["총무팀장"],
+ "doc_no": "전략기획부-○○", "date": "", "disclosure": "부분공개"}
