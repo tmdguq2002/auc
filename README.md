@@ -54,17 +54,10 @@
 
 ### ChatGPT
 
-같은 ZIP(Agent Skills 표준 형식)을 ChatGPT 스킬 기능에 올려 보세요. *(동작 여부는 아직 확인되지 않았습니다.)*
-안 되면 **커스텀 GPT**로 쓸 수 있습니다.
-
-<details>
-<summary>커스텀 GPT 설정 방법</summary>
-
-1. **지침(Instructions)** 에 `SKILL.md` 본문과 `reference/gongmun.md`, `reference/report.md` 내용을 붙여 넣습니다.
-2. **지식(Knowledge)** 에 `scripts/*.py`, `templates/*.hwpx` 를 올립니다.
-3. **코드 인터프리터** 를 켭니다.
-
-</details>
+1. [`dist/auc-docs.zip`](dist/auc-docs.zip) 을 내려받습니다.
+2. ChatGPT 왼쪽 화면에서 **플러그인 → 스킬** 로 들어갑니다.
+3. **추가** 버튼 → **컴퓨터에서 업로드** 를 눌러 ZIP을 선택합니다.
+4. 대화창에 claude.ai와 똑같이 요청합니다.
 
 ---
 
