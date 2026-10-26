@@ -23,17 +23,26 @@ def all_text(path):
 
 class TemplateTest(unittest.TestCase):
     def test_templates_have_no_personal_info(self):
-        for kind in ('gongmun', 'report'):
+        for kind in ('gongmun', 'report', 'yoji'):
             text = all_text(os.path.join(TEMPLATES, kind + '.hwpx'))
             for s in FORBIDDEN:
                 self.assertNotIn(s, text, '%s: %s' % (kind, s))
             self.assertIsNone(re.search(r'\b0\d{1,2}-\d{3,4}-\d{4}\b', text), kind)
 
     def test_template_size(self):
-        self.assertLess(os.path.getsize(os.path.join(TEMPLATES, 'report.hwpx')), 500 * 1024)
+        for kind in ('report', 'yoji'):
+            self.assertLess(os.path.getsize(os.path.join(TEMPLATES, kind + '.hwpx')), 500 * 1024, kind)
+
+    def test_yoji_photos_removed_consistently(self):
+        with zipfile.ZipFile(os.path.join(TEMPLATES, 'yoji.hwpx')) as z:
+            names = z.namelist()
+            xml = z.read('Contents/section0.xml').decode('utf-8')
+            for ref in set(re.findall(r'binaryItemIDRef="(\w+)"', xml + z.read('Contents/header.xml').decode('utf-8'))):
+                self.assertTrue(any(n.startswith('BinData/%s.' % ref) for n in names), ref)
+        self.assertFalse(any(n.startswith('BinData/image3') or n.startswith('BinData/image4') for n in names))
 
     def test_templates_open_as_zip(self):
-        for kind in ('gongmun', 'report'):
+        for kind in ('gongmun', 'report', 'yoji'):
             with zipfile.ZipFile(os.path.join(TEMPLATES, kind + '.hwpx')) as z:
                 first = z.infolist()[0]
                 self.assertEqual(first.filename, 'mimetype')

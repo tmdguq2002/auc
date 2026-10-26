@@ -1,17 +1,21 @@
 ---
 name: auc-docs
-description: Use when an 안양도시공사(AUC, Anyang Urban Corporation) staff member asks for a 공문, 기안문, 시행문, 협조 요청, 안내 공문, 결과보고, 계획보고, 내부 보고서, or HWPX/한글 document, especially from a memo, PDF, HWPX, or meeting notes.
+description: Use when an 안양도시공사(AUC, Anyang Urban Corporation) staff member asks for a 요지, 공문, 기안문, 시행문, 협조 요청, 안내 공문, 결과보고, 계획보고, 내부 보고서, 한 장 요약, or HWPX/한글 document, especially from a memo, PDF, HWPX, or meeting notes.
 ---
 
-# 안양도시공사 문서작성 (공문서·내부 보고서 → HWPX)
+# 안양도시공사 문서작성 (요지·공문서·보고서 → HWPX)
 
 자료(메모·PDF·HWPX·회의록)를 받아 **질문으로 빈 곳을 채운 뒤** 공사 서식 그대로의 HWPX를 만든다.
 사용자는 한글에서 열어 개인정보 칸만 채우고 바로 기안한다.
 
 ## 절차
 
-1. **자료를 끝까지 읽는다.** 공문인지 보고서인지 정한다(애매하면 그것부터 질문).
-   해당 규칙을 읽는다: 공문 `reference/gongmun.md`, 보고서 `reference/report.md`.
+1. **첫 질문은 항상 문서 종류다.** 자료를 끝까지 읽은 뒤, 다른 어떤 질문보다 먼저 묻는다:
+   > 어떤 문서로 만들까요? **① 요지**(한 장 요약) / **② 공문서**(시행문) / **③ 보고서**(표지+본문)
+
+   요청에 "공문"처럼 종류가 적혀 있어도 묻는다. 그때는 그 종류를 추천으로 표시한다("②로 하시려는 것 같은데 맞나요?").
+   "질문하지 말고 바로"라고 해도 종류가 요청에 없으면 이 질문 하나는 한다(종류가 있으면 그대로 진행).
+   답을 받으면 그 규칙을 읽는다: 요지 `reference/yoji.md`, 공문 `reference/gongmun.md`, 보고서 `reference/report.md`.
 2. **질문한다 — 한 번에 하나씩.** 각 reference의 "질문으로 확정할 것" 표에서 자료로 답이 안 되는 것을
    중요한 순서대로 묻는다. 질문은 한 문장, 왜 묻는지 짧게, 가능하면 초안을 제안하고 확인받는다.
    앞 답을 반영해 다음 질문을 고른다. 사실관계뿐 아니라 어조·강조·구성도 묻는다.

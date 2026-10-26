@@ -27,11 +27,6 @@ def _with_prefix(prefix, value, normal, emphasis):
     return [(normal, prefix)] + runs
 
 
-def _set_tc_text(tc, runs):
-    proto, char_pr = h.first_para_proto(tc)
-    return h.set_sublist_paras(tc, 0, len(tc), h.clone_para(proto, runs or [(char_pr, '')]))
-
-
 def _replace_text_runs(cell, runs):
     """칸 안 첫 문단에서 글자 run만 바꾸고 조판 부호(ctrl) run은 남긴다."""
     s = cell.index('<hp:p ')
@@ -51,57 +46,18 @@ def _heading(proto, n, title):
     for i, (s, e) in enumerate(spans):
         tc = p[s:e]
         if i == 0:
-            tc = _set_tc_text(tc, [('10', ROMAN[n])])
+            tc = h.set_tc_text(tc, [('10', ROMAN[n])])
         elif i == 1:
-            tc = _set_tc_text(tc, [('11', title)])
+            tc = h.set_tc_text(tc, [('11', title)])
         out.append(p[last:s] + tc)
         last = e
     return ''.join(out) + p[last:]
 
 
-def _column_widths(header, rows):
-    """열 너비를 내용 길이(머리칸·가장 긴 칸, 최소 3글자)에 비례해 나눈다. 합계는 TABLE_WIDTH."""
-    n = len(header)
-    weight = [max([3, len(str(header[c]))] + [len(str(r[c])) for r in rows]) for c in range(n)]
-    widths = [TABLE_WIDTH * w // sum(weight) for w in weight]
-    widths[-1] += TABLE_WIDTH - sum(widths)
-    return widths
-
-
-def _table(proto, header, rows):
-    n = len(header)
-    if n == 0 or any(len(r) != n for r in rows):
-        raise ValueError('표의 각 행은 머리행과 같은 열 수여야 합니다')
-    p = h.strip_linesegs(proto)
-    t0 = p.index('<hp:tbl ')
-    t1 = p.index('</hp:tbl>') + len('</hp:tbl>')
-    tbl = p[t0:t1]
-    spans = h.tc_spans(tbl)
-    head_tc = tbl[spans[0][0]:spans[0][1]]
-    body_tc = next(tbl[s:e] for s, e in spans if 'rowAddr="1"' in tbl[s:e])
-    head_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', head_tc).group(1))
-    body_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', body_tc).group(1))
-    widths = _column_widths(header, rows)
-
-    def cell(proto_tc, text, col, row, height, char):
-        tc = _set_tc_text(proto_tc, [(char, '' if text is None else str(text))])
-        tc = re.sub(r'<hp:cellAddr [^>]*/>', '<hp:cellAddr colAddr="%d" rowAddr="%d"/>' % (col, row), tc)
-        return re.sub(r'<hp:cellSz [^>]*/>', '<hp:cellSz width="%d" height="%d"/>' % (widths[col], height), tc)
-
-    trs = ['<hp:tr>' + ''.join(cell(head_tc, t, c, 0, head_h, '14') for c, t in enumerate(header)) + '</hp:tr>']
-    for r, row in enumerate(rows, 1):
-        trs.append('<hp:tr>' + ''.join(cell(body_tc, t, c, r, body_h, '15') for c, t in enumerate(row)) + '</hp:tr>')
-    pre = tbl[:tbl.index('<hp:tr>')]
-    pre = re.sub(r'rowCnt="\d+" colCnt="\d+"', 'rowCnt="%d" colCnt="%d"' % (len(rows) + 1, n), pre)
-    pre = re.sub(r'<hp:sz width="\d+" widthRelTo="ABSOLUTE" height="\d+"',
-                 '<hp:sz width="%d" widthRelTo="ABSOLUTE" height="%d"' % (TABLE_WIDTH, head_h + body_h * len(rows)), pre)
-    return p[:t0] + pre + ''.join(trs) + '</hp:tbl>' + p[t1:]
-
-
 def _photo(proto, caption):
     p = h.strip_linesegs(proto)
     s, e = h.tc_spans(p)[-1]
-    return p[:s] + _set_tc_text(p[s:e], [('33', caption)]) + p[e:]
+    return p[:s] + h.set_tc_text(p[s:e], [('33', caption)]) + p[e:]
 
 
 def _schedule(proto, text, when):
@@ -173,7 +129,7 @@ def build_report(spec, template, out):
             elif 'note' in b:
                 body.append(h.clone_para(P['note'], _with_prefix('※ ', b['note'], '31', '31')))
             elif 'table' in b:
-                body.append(_table(P['table'], b['table']['header'], b['table']['rows']))
+                body.append(h.build_table(P['table'], b['table']['header'], b['table']['rows'], TABLE_WIDTH, '14', '15'))
             elif 'photo' in b:
                 body.append(_photo(P['photo'], b['photo']))
             else:

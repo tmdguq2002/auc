@@ -146,3 +146,55 @@ def unique_object_ids(xml):
         new = next(i for i in counter if str(i) not in seen)
         return '<hp:%s id="%d"' % (m.group(1), new)
     return re.sub(r'<hp:(tbl|pic|rect) id="(\d+)"', fix, xml)
+
+
+def set_tc_text(tc, runs):
+    """표 칸 하나의 내용을 runs 한 문단으로. runs가 비면 칸의 글자 모양만 가진 빈 run."""
+    proto, char_pr = first_para_proto(tc)
+    return set_sublist_paras(tc, 0, len(tc), clone_para(proto, runs or [(char_pr, '')]))
+
+
+def column_widths(header, rows, total):
+    """열 너비를 내용 길이(머리칸·가장 긴 칸, 최소 3글자)에 비례해 나눈다. 합계는 total."""
+    n = len(header)
+    weight = [max([3, len(str(header[c]))] + [len(str(r[c])) for r in rows]) for c in range(n)]
+    widths = [total * w // sum(weight) for w in weight]
+    widths[-1] += total - sum(widths)
+    return widths
+
+
+def build_table(proto, header, rows, total, head_char, body_char):
+    """원형 표 문단(머리행·본문행 원형)을 복제해 header/rows 크기의 표를 만든다."""
+    n = len(header)
+    if n == 0 or any(len(r) != n for r in rows):
+        raise ValueError('표의 각 행은 머리행과 같은 열 수여야 합니다')
+    p = strip_linesegs(proto)
+    t0 = p.index('<hp:tbl ')
+    t1 = p.index('</hp:tbl>') + len('</hp:tbl>')
+    tbl = p[t0:t1]
+    spans = tc_spans(tbl)
+    # 열마다 원형 표의 같은 열 칸을 원형으로 쓴다(열별 정렬·문단 모양 유지). 열이 더 많으면 마지막 열.
+    head_tcs = [tbl[s:e] for s, e in spans if 'rowAddr="0"' in tbl[s:e]]
+    body_tcs = [tbl[s:e] for s, e in spans if 'rowAddr="1"' in tbl[s:e]]
+    head_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', head_tcs[0]).group(1))
+    body_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', body_tcs[0]).group(1))
+    widths = column_widths(header, rows, total)
+
+    def cell(proto_tc, text, col, row, height, char):
+        tc = set_tc_text(proto_tc, [(char, '' if text is None else str(text))])
+        tc = re.sub(r'<hp:cellAddr [^>]*/>', '<hp:cellAddr colAddr="%d" rowAddr="%d"/>' % (col, row), tc)
+        return re.sub(r'<hp:cellSz [^>]*/>', '<hp:cellSz width="%d" height="%d"/>' % (widths[col], height), tc)
+
+    def proto(tcs, c):
+        return tcs[min(c, len(tcs) - 1)]
+
+    trs = ['<hp:tr>' + ''.join(cell(proto(head_tcs, c), t, c, 0, head_h, head_char)
+                               for c, t in enumerate(header)) + '</hp:tr>']
+    for r, row in enumerate(rows, 1):
+        trs.append('<hp:tr>' + ''.join(cell(proto(body_tcs, c), t, c, r, body_h, body_char)
+                                       for c, t in enumerate(row)) + '</hp:tr>')
+    pre = tbl[:tbl.index('<hp:tr>')]
+    pre = re.sub(r'rowCnt="\d+" colCnt="\d+"', 'rowCnt="%d" colCnt="%d"' % (len(rows) + 1, n), pre)
+    pre = re.sub(r'<hp:sz width="\d+" widthRelTo="ABSOLUTE" height="\d+"',
+                 '<hp:sz width="%d" widthRelTo="ABSOLUTE" height="%d"' % (total, head_h + body_h * len(rows)), pre)
+    return p[:t0] + pre + ''.join(trs) + '</hp:tbl>' + p[t1:]

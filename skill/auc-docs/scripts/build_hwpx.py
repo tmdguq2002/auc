@@ -1,7 +1,7 @@
 """JSON 내용으로 안양도시공사 서식 HWPX를 만든다.
 
 사용: python3 scripts/build_hwpx.py <내용.json> <결과.hwpx>
-JSON의 "type": "gongmun"(공문서) | "report"(내부 보고서)
+JSON의 "type": "gongmun"(공문서) | "report"(내부 보고서) | "yoji"(요지)
 """
 import json
 import os
@@ -20,8 +20,11 @@ def build(spec, out):
     elif kind == 'report':
         from report import build_report
         build_report(spec, os.path.join(TEMPLATES, 'report.hwpx'), out)
+    elif kind == 'yoji':
+        from yoji import build_yoji
+        build_yoji(spec, os.path.join(TEMPLATES, 'yoji.hwpx'), out)
     else:
-        raise ValueError('"type"은 gongmun 또는 report 이어야 합니다: %r' % kind)
+        raise ValueError('"type"은 gongmun, report, yoji 중 하나여야 합니다: %r' % kind)
 
 
 def main(argv):

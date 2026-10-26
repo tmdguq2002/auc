@@ -4,12 +4,12 @@
 
 **메모 한 줄 → 질문 몇 개 → 공사 서식 그대로의 HWPX**
 
-공문서(시행문)와 내부 보고서를 대신 써 주는 Claude 스킬
+요지 · 공문서(시행문) · 내부 보고서를 대신 써 주는 Claude 스킬
 
 <picture><img src="https://img.shields.io/badge/Agent%20Skill-auc--docs-5A4FCF" alt="Agent Skill"></picture>
 <picture><img src="https://img.shields.io/badge/출력-HWPX%20(한글)-1F6FEB" alt="HWPX"></picture>
 <picture><img src="https://img.shields.io/badge/Python-표준%20라이브러리만-3776AB?logo=python&logoColor=white" alt="Python"></picture>
-<picture><img src="https://img.shields.io/badge/tests-47%20passed-2EA44F" alt="Tests"></picture>
+<picture><img src="https://img.shields.io/badge/tests-60%20passed-2EA44F" alt="Tests"></picture>
 
 [빠른 시작](#-빠른-시작) · [사용 예시](#-사용-예시) · [지원 문서](#-지원-문서) · [개인정보](#-개인정보-보호)
 
@@ -22,22 +22,29 @@
 | | |
 |---|---|
 | 📥 **무엇이든 넣으세요** | 메모, PDF, HWPX, 회의록 — 있는 자료 그대로 |
+| 🗂 **문서 종류부터 묻습니다** | 처음에 ① 요지 / ② 공문서 / ③ 보고서 중 무엇으로 만들지 확인 |
 | 💬 **하나씩 물어봅니다** | 빠진 내용(수신, 일정, 붙임, 어조…)을 한 번에 하나씩 질문 |
 | ✅ **쓰기 전에 확인합니다** | "이렇게 쓰겠습니다" 요약을 보여 주고 승인 후 생성 |
-| 🏢 **공사 서식 그대로** | 실제 기안문·보고서 서식을 틀로 써서 글꼴·표·결재란이 원본과 동일 |
+| 🏢 **공사 서식 그대로** | 실제 요지·기안문·보고서 서식을 틀로 써서 글꼴·표·결재란이 원본과 동일 |
 | 🚫 **지어내지 않습니다** | 날짜·붙임·법령 근거·수치는 자료나 답변에 있는 것만 |
 | 🔒 **개인정보를 다루지 않습니다** | 이름·전화·이메일은 묻지도 옮기지도 않고 자리표시로 |
 
 <table>
 <tr>
-<td align="center" width="33%"><img src="docs/images/sample-gongmun.png" alt="공문서 예시"></td>
-<td align="center" width="33%"><img src="docs/images/sample-report-cover.png" alt="보고서 표지 예시"></td>
-<td align="center" width="33%"><img src="docs/images/sample-report-body.png" alt="보고서 본문 예시"></td>
+<td align="center" width="50%"><img src="docs/images/sample-yoji.png" alt="요지 예시"></td>
+<td align="center" width="50%"><img src="docs/images/sample-gongmun.png" alt="공문서 예시"></td>
 </tr>
 <tr>
-<td align="center"><sub><b>공문서</b> · <code>samples/gongmun_futsal.hwpx</code></sub></td>
-<td align="center"><sub><b>보고서 표지</b> · <code>samples/report_tft.hwpx</code></sub></td>
-<td align="center"><sub><b>보고서 본문</b> · <code>samples/report_tft.hwpx</code></sub></td>
+<td align="center"><sub><b>① 요지</b> · <code>samples/yoji_two_pages.hwpx</code></sub></td>
+<td align="center"><sub><b>② 공문서</b> · <code>samples/gongmun_futsal.hwpx</code></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/images/sample-report-cover.png" alt="보고서 표지 예시"></td>
+<td align="center"><img src="docs/images/sample-report-body.png" alt="보고서 본문 예시"></td>
+</tr>
+<tr>
+<td align="center"><sub><b>③ 보고서 표지</b> · <code>samples/report_tft.hwpx</code></sub></td>
+<td align="center"><sub><b>③ 보고서 본문</b> · <code>samples/report_tft.hwpx</code></sub></td>
 </tr>
 </table>
 
@@ -75,7 +82,8 @@
 
 ```mermaid
 flowchart LR
-    A[📥 자료<br>메모·PDF·HWPX] --> B[💬 질문<br>한 번에 하나씩]
+    A[📥 자료<br>메모·PDF·HWPX] --> T{🗂 문서 종류<br>요지·공문서·보고서}
+    T --> B[💬 질문<br>한 번에 하나씩]
     B --> C{📎 붙임 확인}
     C --> D[✅ 요약 확인<br>'이렇게 쓰겠습니다']
     D --> E[⚙️ HWPX 생성]
@@ -88,8 +96,12 @@ flowchart LR
 
 > **👤 직원** 2026년 하반기 직원 교육 일정 안내 공문 써줘. 11월 12일, 13일 이틀이고 장소는 대회의실, 수신은 전 부서.
 >
-> **🤖 Claude** 공사 서식에 맞추려면 몇 가지를 더 여쭤봐야 합니다. 하나씩 여쭙겠습니다.
-> **첫 번째 질문입니다. 어떤 교육인가요? 교육명과 하루 교육 시간을 알려 주세요.**
+> **🤖 Claude** 어떤 문서로 만들까요? **① 요지**(한 장 요약) / **② 공문서**(시행문) / **③ 보고서**(표지+본문)
+> 공문을 말씀하셨으니 ②로 하시려는 것 같은데 맞나요?
+>
+> **👤 직원** 응 공문
+>
+> **🤖 Claude** **다음 질문입니다. 어떤 교육인가요? 교육명과 하루 교육 시간을 알려 주세요.**
 >
 > **👤 직원** 청렴·직장 내 괴롭힘 예방교육, 14:00~16:00, 같은 교육 이틀 반복이라 하루만 골라 참석
 >
@@ -113,10 +125,22 @@ flowchart LR
 
 <table>
 <tr>
-<th width="50%">📨 공문서 (시행문)</th>
-<th width="50%">📊 내부 보고서</th>
+<th width="33%">📝 요지</th>
+<th width="33%">📨 공문서 (시행문)</th>
+<th width="33%">📊 내부 보고서</th>
 </tr>
 <tr valign="top">
+<td>
+
+- 한 장 요약, 주제별로 여러 쪽
+- 머리: 로고·표어·날짜·부서
+- 색 띠 + 큰 제목
+- `개  요` 라벨 (바꿀 수 있음)
+- 항목 ` ❍` → `-` → `※`
+- 표 (열 너비 자동)
+- 사진 칸 2개 + 설명
+
+</td>
 <td>
 
 - 표어·로고·기관명, 수신·경유·제목
@@ -165,13 +189,16 @@ flowchart LR
 skill/auc-docs/              ← claude.ai에 올리는 스킬 (dist/auc-docs.zip)
 ├── SKILL.md                 질문 절차 · 지어내기 금지 · 개인정보 규칙
 ├── reference/
+│   ├── yoji.md              요지 작성 규칙 · 질문 목록 · JSON 예시
 │   ├── gongmun.md           공문 작성 규칙 · 질문 목록 · JSON 예시
 │   └── report.md            보고서 작성 규칙 · 질문 목록 · JSON 예시
 ├── templates/
+│   ├── yoji.hwpx            요지 서식 (사진 제거)
 │   ├── gongmun.hwpx         공문 서식 (개인정보 제거)
 │   └── report.hwpx          보고서 서식 (개인정보·사진 제거)
 └── scripts/
     ├── build_hwpx.py        JSON → HWPX
+    ├── yoji.py              요지 생성
     ├── gongmun.py           공문 생성
     ├── report.py            보고서 생성
     ├── hwpx_io.py           HWPX 읽기·쓰기, 원형 문단 복제
