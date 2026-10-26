@@ -48,7 +48,7 @@
 </tr>
 </table>
 
-<div align="center"><sub>LibreOffice로 렌더링한 미리보기입니다. 한글에서는 글꼴·간격이 조금 다를 수 있습니다.</sub></div>
+<div align="center"><sub>LibreOffice로 렌더링한 미리보기입니다. 한글에서는 글꼴·간격이 조금 다를 수 있고,<br>요지의 <code>개 요</code> 라벨 옆 장식(입체 아이콘·선)은 미리보기에서 빠져 있습니다(한글 파일에는 그대로 있음).</sub></div>
 
 ---
 
