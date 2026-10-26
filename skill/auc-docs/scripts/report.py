@@ -4,7 +4,7 @@
   0 표지(결재·협조란, 제목, 부서) + 본문 누름틀 시작
   1 제목·목적 박스   2 빈 줄   3 대제목 표   14 대제목 앞 빈 줄
   16 ' 1.' 소제목   4 동그라미   48 '-'   43 '※'   63 동그라미+일정(탭)
-  7 표(머리행·본문행)   61 사진대지   66 마지막 문단(누름틀 끝)
+  7 표(머리행·본문행)   61 사진대지   66 마지막 문단(누름틀 끝)   21 소제목 앞 빈 줄
 """
 import re
 
@@ -59,6 +59,15 @@ def _heading(proto, n, title):
     return ''.join(out) + p[last:]
 
 
+def _column_widths(header, rows):
+    """열 너비를 내용 길이(머리칸·가장 긴 칸, 최소 3글자)에 비례해 나눈다. 합계는 TABLE_WIDTH."""
+    n = len(header)
+    weight = [max([3, len(str(header[c]))] + [len(str(r[c])) for r in rows]) for c in range(n)]
+    widths = [TABLE_WIDTH * w // sum(weight) for w in weight]
+    widths[-1] += TABLE_WIDTH - sum(widths)
+    return widths
+
+
 def _table(proto, header, rows):
     n = len(header)
     if n == 0 or any(len(r) != n for r in rows):
@@ -72,8 +81,7 @@ def _table(proto, header, rows):
     body_tc = next(tbl[s:e] for s, e in spans if 'rowAddr="1"' in tbl[s:e])
     head_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', head_tc).group(1))
     body_h = int(re.search(r'<hp:cellSz width="\d+" height="(\d+)"', body_tc).group(1))
-    widths = [TABLE_WIDTH // n] * n
-    widths[-1] += TABLE_WIDTH - sum(widths)
+    widths = _column_widths(header, rows)
 
     def cell(proto_tc, text, col, row, height, char):
         tc = _set_tc_text(proto_tc, [(char, '' if text is None else str(text))])
@@ -119,7 +127,8 @@ def build_report(spec, template, out):
     entries, xml = h.read_section(template)
     head, ps, tail = h.split_section(xml)
     P = {k: ps[i] for k, i in dict(cover=0, intro=1, blank=2, heading=3, gap=14, num=16, circle=4,
-                                    dash=48, note=43, schedule=63, table=7, photo=61, last=66).items()}
+                                    dash=48, note=43, schedule=63, table=7, photo=61, last=66,
+                                    num_gap=21).items()}
     field_end = re.search(r'<hp:run charPrIDRef="\d+"><hp:ctrl><hp:fieldEnd[^>]*/></hp:ctrl><hp:t/></hp:run>',
                           P['last']).group()
 
@@ -152,6 +161,8 @@ def build_report(spec, template, out):
         for b in sec['blocks']:
             if 'num' in b:
                 num += 1
+                if num > 1:  # 원본처럼 두 번째 소제목부터 앞에 빈 줄
+                    body.append(P['num_gap'])
                 body.append(h.clone_para(P['num'], _with_prefix(' %d. ' % num, b['num'], '19', '19')))
             elif 'circle' in b and b.get('when'):
                 body.append(_schedule(P['schedule'], b['circle'], b['when']))

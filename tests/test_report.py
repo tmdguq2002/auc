@@ -66,7 +66,25 @@ class ReportTest(unittest.TestCase):
             self.assertEqual(len(re.findall(r'<hp:tc\b', tbl)), 3 * n)
             widths = [int(w) for w in re.findall(r'<hp:cellSz width="(\d+)"', tbl)[:n]]
             self.assertEqual(sum(widths), 46216)
+            self.assertTrue(all(w > 0 for w in widths))
             self.assertIn('r1%d' % (n - 1), hwpx_io.para_text(tbl))
+
+    def test_column_widths_follow_content(self):
+        s = spec()
+        s['sections'] = [{'title': 't', 'blocks': [{'table': {
+            'header': ['월', '전년동월 사용량', '조치·지원사항'], 'rows': [['11월', '', '']]}}]}]
+        tbl = [t for p in hwpx_io.split_section(build(s))[1][3:] for t in tables(p) if '전년동월' in t][0]
+        w = [int(x) for x in re.findall(r'<hp:cellSz width="(\d+)"', tbl)[:3]]
+        self.assertEqual(sum(w), 46216)
+        self.assertLess(w[0], w[1])
+        self.assertLess(w[0], w[2])
+
+    def test_blank_line_before_later_num(self):
+        paras = [hwpx_io.para_text(p) for p in hwpx_io.split_section(build(spec()))[1]]
+        i = paras.index(' 2. 에너지 사용 관리대장 시범운영')
+        self.assertEqual(paras[i - 1].strip(), '')
+        j = paras.index(' 1. 시설별 에너지 사용현황 및 감축방안 점검')
+        self.assertTrue(paras[j - 1].startswith('Ⅱ'))
 
     def test_cover(self):
         xml = build(spec())
