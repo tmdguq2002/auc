@@ -9,7 +9,7 @@
 <picture><img src="https://img.shields.io/badge/Agent%20Skill-auc--docs-5A4FCF" alt="Agent Skill"></picture>
 <picture><img src="https://img.shields.io/badge/출력-HWPX%20(한글)-1F6FEB" alt="HWPX"></picture>
 <picture><img src="https://img.shields.io/badge/Python-표준%20라이브러리만-3776AB?logo=python&logoColor=white" alt="Python"></picture>
-<picture><img src="https://img.shields.io/badge/tests-60%20passed-2EA44F" alt="Tests"></picture>
+<picture><img src="https://img.shields.io/badge/tests-59%20passed-2EA44F" alt="Tests"></picture>
 
 [빠른 시작](#-빠른-시작) · [사용 예시](#-사용-예시) · [지원 문서](#-지원-문서) · [개인정보](#-개인정보-보호)
 
@@ -31,11 +31,11 @@
 
 <table>
 <tr>
-<td align="center" width="50%"><img src="docs/images/sample-yoji.png" alt="요지 예시"></td>
+<td align="center" width="50%"><img src="docs/images/yoji-event-preview.png" alt="요지 예시"></td>
 <td align="center" width="50%"><img src="docs/images/sample-gongmun.png" alt="공문서 예시"></td>
 </tr>
 <tr>
-<td align="center"><sub><b>① 요지</b> · <code>samples/yoji_two_pages.hwpx</code></sub></td>
+<td align="center"><sub><b>① 요지</b> · <code>samples/yoji_event.hwpx</code></sub></td>
 <td align="center"><sub><b>② 공문서</b> · <code>samples/gongmun_futsal.hwpx</code></sub></td>
 </tr>
 <tr>
@@ -132,7 +132,8 @@ flowchart LR
 <tr valign="top">
 <td>
 
-- 한 장 요약, 주제별로 여러 쪽
+- **항상 한 장**
+- 글 위주(줄간격 200%) / 표 위주(160%) 두 모양 — 표가 있으면 자동
 - 머리: 로고·표어·날짜·부서
 - 색 띠 + 큰 제목
 - `개  요` 라벨 (바꿀 수 있음)

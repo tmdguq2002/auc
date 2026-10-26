@@ -1,9 +1,9 @@
-"""요지(한 장 요약) 생성: 쪽마다 머리(표어·날짜·부서) + 색 띠 + 제목 + 라벨 + 본문.
+"""요지(한 장 요약) 생성: 머리(표어·날짜·부서) + 색 띠 + 제목 + 라벨 + 본문, 항상 한 쪽.
 
-서식 최상위 문단 중 원형으로 쓰는 것(번호는 서식 문단 순번):
-  0 첫 쪽 머리(구역 설정 포함)   14 다음 쪽 머리(쪽 나눔)   1 색 띠   2·4 빈 줄
-  3 제목   5 '개  요' 라벨
-  6·10 ❍/- 항목(줄간격 200%)   20·24 ❍/- 항목(줄간격 160%, 표 있는 쪽)
+서식에는 참고용 요지 두 장이 들어 있다. 첫 장(글 위주, 줄간격 200%)과 둘째 장(표 위주, 160%)에서
+원형 문단을 골라 쓴다(번호는 서식 문단 순번):
+  0 머리(구역 설정 포함)   1 색 띠   2·4 빈 줄   3 제목   5 '개  요' 라벨
+  6·10 ❍/- 항목(200%)   20·24 ❍/- 항목(160%, 표가 있으면)
   27 표(머리행·본문행)   13 사진 2칸 + 설명
 """
 import re
@@ -60,7 +60,7 @@ def _photo(proto, captions):
                   r'\g<1>%d' % (PHOTO_HEIGHT + CAPTION_HEIGHT), p, count=1)
 
 
-def _page(P, page, first):
+def _page(P, page):
     for k in ('title', 'blocks'):
         if not page.get(k):
             raise ValueError('필수 항목이 없습니다: "%s"' % k)
@@ -69,7 +69,7 @@ def _page(P, page, first):
     label = h.strip_linesegs(P['label']).replace(
         '<hp:t>%s</hp:t>' % DEFAULT_LABEL, '<hp:t>%s</hp:t>' % h.escape(page.get('label') or DEFAULT_LABEL))
 
-    out = [_header(P['head1'] if first else P['head2'], page.get('date', ''), page.get('dept', '')),
+    out = [_header(P['head'], page.get('date', ''), page.get('dept', '')),
            h.strip_linesegs(P['bar']), P['blank_a'],
            h.clone_para(P['title'], [('30', page['title'])]), P['blank_b'], label]
     for b in page['blocks']:
@@ -89,13 +89,11 @@ def _page(P, page, first):
 
 
 def build_yoji(spec, template, out):
-    pages = spec.get('pages') or [spec]
+    if 'pages' in spec:
+        raise ValueError('요지는 한 장입니다. 주제가 여러 개면 요지를 따로 만드세요')
     entries, xml = h.read_section(template)
     head, ps, tail = h.split_section(xml)
-    P = {k: ps[i] for k, i in dict(head1=0, bar=1, blank_a=2, title=3, blank_b=4, label=5,
-                                    circle39=6, dash39=10, photo=13, head2=14,
+    P = {k: ps[i] for k, i in dict(head=0, bar=1, blank_a=2, title=3, blank_b=4, label=5,
+                                    circle39=6, dash39=10, photo=13,
                                     circle41=20, dash41=24, table=27).items()}
-    body = []
-    for n, page in enumerate(pages):
-        body += _page(P, page, n == 0)
-    h.write_hwpx(out, entries, head + ''.join(body) + tail)
+    h.write_hwpx(out, entries, head + ''.join(_page(P, spec)) + tail)
