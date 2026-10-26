@@ -226,10 +226,11 @@ def column_widths(header, rows, total):
     return widths
 
 
-def build_table(proto, header, rows, total, head_char, body_char, head_tcs=None, body_tcs=None):
+def build_table(proto, header, rows, total, head_char, body_char, head_tcs=None, body_tcs=None, rest_tcs=None):
     """원형 표 문단(머리행·본문행 원형)을 복제해 header/rows 크기의 표를 만든다.
 
     head_tcs/body_tcs: 열마다 쓸 원형 칸 XML 목록. 없으면 원형 표의 0행·1행 칸을 쓴다.
+    rest_tcs: 둘째 본문 행부터 쓸 원형 칸(첫 본문 행만 머리행 아래 이중선을 갖는 서식용). 없으면 body_tcs.
     """
     n = len(header)
     if n == 0 or any(len(r) != n for r in rows):
@@ -258,10 +259,27 @@ def build_table(proto, header, rows, total, head_char, body_char, head_tcs=None,
     trs = ['<hp:tr>' + ''.join(cell(proto(head_tcs, c), t, c, 0, head_h, head_char)
                                for c, t in enumerate(header)) + '</hp:tr>']
     for r, row in enumerate(rows, 1):
-        trs.append('<hp:tr>' + ''.join(cell(proto(body_tcs, c), t, c, r, body_h, body_char)
+        tcs = body_tcs if r == 1 or not rest_tcs else rest_tcs
+        trs.append('<hp:tr>' + ''.join(cell(proto(tcs, c), t, c, r, body_h, body_char)
                                        for c, t in enumerate(row)) + '</hp:tr>')
     pre = tbl[:tbl.index('<hp:tr>')]
     pre = re.sub(r'rowCnt="\d+" colCnt="\d+"', 'rowCnt="%d" colCnt="%d"' % (len(rows) + 1, n), pre)
     pre = re.sub(r'<hp:sz width="\d+" widthRelTo="ABSOLUTE" height="\d+"',
                  '<hp:sz width="%d" widthRelTo="ABSOLUTE" height="%d"' % (total, head_h + body_h * len(rows)), pre)
     return p[:t0] + pre + ''.join(trs) + '</hp:tbl>' + p[t1:]
+
+
+def widen_cells(p, idxs, width):
+    """문단 안 표에서 idxs번째 칸들의 너비를 width로 바꾸고, 표 너비를 첫 행 칸 너비의 합으로 맞춘다."""
+    spans = tc_spans(p)
+    out, last = [], 0
+    for i, (s, e) in enumerate(spans):
+        tc = p[s:e]
+        if i in idxs:
+            tc = re.sub(r'(<hp:cellSz width=")\d+', r'\g<1>%d' % width, tc)
+        out.append(p[last:s] + tc)
+        last = e
+    p = ''.join(out) + p[last:]
+    row0 = sum(int(w) for tc in re.findall(r'<hp:tc\b.*?</hp:tc>', p, re.S) if 'rowAddr="0"' in tc
+               for w in re.findall(r'<hp:cellSz width="(\d+)"', tc))
+    return re.sub(r'(<hp:sz width=")\d+', r'\g<1>%d' % row0, p, count=1)

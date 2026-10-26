@@ -16,6 +16,7 @@ SECTION1 = 'Contents/section1.xml'
 ROMAN = 'ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ'
 NORMAL, BOLD = '2', '28'
 TABLE_WIDTH = 45982
+HEADING_MIN, HEADING_MAX = 14461, 41000  # 대제목 제목 칸 너비(원본 4글자 기준 ~ 쪽 너비)
 MAX_APPROVERS, MAX_COOPERATORS = 4, 6
 
 
@@ -57,15 +58,19 @@ def _title_box(proto, title, summary):
 
 
 def _heading(proto, n, title):
-    return _cell_texts(h.strip_linesegs(proto), [[('32', ROMAN[n])], None, [('34', title)]])
+    p = _cell_texts(h.strip_linesegs(proto), [[('32', ROMAN[n])], None, [('34', title)]])
+    # 제목 칸을 제목 길이에 맞춰 넓혀 한 줄에 들어가게 한다(20pt ≈ 글자당 2000)
+    return h.widen_cells(p, {2}, min(HEADING_MAX, max(HEADING_MIN, len(title) * 2050 + 600)))
 
 
 def _table(proto, header, rows):
     p = h.strip_linesegs(proto)
     tcs = {re.search(r'colAddr="(\d+)" rowAddr="(\d+)"', p[s:e]).groups(): p[s:e] for s, e in h.tc_spans(p)}
     head = [tcs[('0', '0')]]
-    body = [tcs[('1', '1')], tcs[('2', '1')]]  # 첫 열: 기관칸(굵게·음영), 나머지: 명단칸
-    return h.build_table(p, header, rows, TABLE_WIDTH, '58', '53', head_tcs=head, body_tcs=body)
+    # 첫 열: 기관칸(굵게·음영), 나머지: 명단칸. 첫 본문 행만 머리행 아래 이중선, 나머지 행은 가는 실선
+    first = [tcs[('1', '1')], tcs[('2', '1')]]
+    rest = [tcs[('1', '2')], tcs[('2', '3')]]
+    return h.build_table(p, header, rows, TABLE_WIDTH, '58', '53', head_tcs=head, body_tcs=first, rest_tcs=rest)
 
 
 def _cover(xml, spec):

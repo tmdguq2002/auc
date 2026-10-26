@@ -86,6 +86,38 @@ class ReportTest(unittest.TestCase):
         j = paras.index(' 1. 시설별 에너지 사용현황 및 감축방안 점검')
         self.assertTrue(paras[j - 1].startswith('Ⅱ'))
 
+    def _survey(self):
+        s = spec()
+        s['sections'] = [{'title': '만족도 조사 결과', 'blocks': [{'table': {
+            'header': ['구 분', '매우 긍정', '긍정', '보통'],
+            'rows': [['프로그램 전반 만족도', '9명 (75.0%)', '3명 (25.0%)', '-'],
+                     ['업무 이해도 향상 도움', '9명 (75.0%)', '3명 (25.0%)', '-'],
+                     ['정기 프로그램 운영 필요성', '8명 (66.7%)', '3명 (25.0%)', '1명 (8.3%)'],
+                     ['향후 재참여 의향', '8명 (66.7%)', '4명 (33.3%)', '-']]}}]}]
+        return build(s)
+
+    def test_long_heading_fits_one_line(self):
+        xml = self._survey()
+        head = [p for p in hwpx_io.split_section(xml)[1] if '만족도 조사 결과' in hwpx_io.para_text(p)][0]
+        cells = re.findall(r'<hp:tc\b.*?</hp:tc>', head, re.S)
+        title_w = int(re.search(r'<hp:cellSz width="(\d+)"', cells[1]).group(1))
+        self.assertGreaterEqual(title_w, len('만족도 조사 결과') * 1700)
+        roman_w = int(re.search(r'<hp:cellSz width="(\d+)"', cells[0]).group(1))
+        tbl_w = int(re.search(r'<hp:sz width="(\d+)"', head).group(1))
+        self.assertEqual(tbl_w, roman_w + title_w)
+        under_w = int(re.search(r'<hp:cellSz width="(\d+)"', cells[2]).group(1))
+        self.assertEqual(under_w, title_w)
+
+    def test_table_rows_have_no_double_lines_or_spacing(self):
+        xml = self._survey()
+        tbl = [t for p in hwpx_io.split_section(xml)[1] for t in tables(p) if '향후 재참여' in t][0]
+        rows = re.findall(r'<hp:tr>(.*?)</hp:tr>', tbl, re.S)
+        bf = [set(re.findall(r'borderFillIDRef="(\d+)"', r)) for r in rows]
+        self.assertEqual(bf[1], {'15'})  # 머리행 바로 아래: 위쪽 이중선
+        for b in bf[2:]:
+            self.assertEqual(b, {'2'})  # 나머지 행: 가는 실선
+        self.assertNotIn('paraPrIDRef="10"', tbl)  # 균등 분할 정렬 금지
+
     def test_cover(self):
         xml = build(spec())
         cover = hwpx_io.para_text(hwpx_io.split_section(xml)[1][0])

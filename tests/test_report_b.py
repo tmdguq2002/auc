@@ -58,6 +58,16 @@ class ReportBTest(unittest.TestCase):
         heads = [l for l in lines(body) if re.match(r'^[ⅠⅡⅢⅣ]', l)]
         self.assertEqual(heads, ['Ⅰ관련근거', 'Ⅱ추진결과', 'Ⅲ향후일정', 'Ⅳ사진대지'])
 
+    def test_long_heading_fits_one_line(self):
+        s = spec()
+        s['sections'][0]['title'] = '참여기관 만족도 조사 결과'
+        _, body = build(s)
+        head = [p for p in hwpx_io.split_section(body)[1] if '참여기관 만족도' in hwpx_io.para_text(p)][0]
+        cells = re.findall(r'<hp:tc\b.*?</hp:tc>', head, re.S)
+        widths = [int(re.search(r'<hp:cellSz width="(\d+)"', c).group(1)) for c in cells]
+        self.assertGreaterEqual(widths[2], len('참여기관 만족도 조사 결과') * 2000)
+        self.assertEqual(int(re.search(r'<hp:sz width="(\d+)"', head).group(1)), sum(widths))
+
     def test_blocks(self):
         t = lines(build(spec())[1])
         for s in ['  □ 전략기획부-4173(2026.9.7.) 「제1회 ESG경영확산협의회 결과보고」',
@@ -93,6 +103,16 @@ class ReportBTest(unittest.TestCase):
         self.assertNotIn('rowSpan="4"', tbl)
         w = [int(x) for x in re.findall(r'<hp:cellSz width="(\d+)"', tbl)[:2]]
         self.assertEqual(sum(w), 45982)
+
+    def test_table_rest_rows_use_plain_borders(self):
+        s = spec()
+        s['sections'][1]['blocks'][1]['table']['rows'] += [['군포도시공사', '○○○ 주임'], ['의왕도시공사', '○○○ 과장']]
+        _, body = build(s)
+        tbl = re.search(r'<hp:tbl\b(?:(?!</hp:tbl>).)*안양도시공사.*?</hp:tbl>', body, re.S).group()
+        rows = re.findall(r'<hp:tr>(.*?)</hp:tr>', tbl, re.S)
+        self.assertEqual(re.findall(r'borderFillIDRef="(\d+)"', rows[1]), ['31', '35'])  # 머리행 아래: 위 이중선
+        for r in rows[2:]:
+            self.assertEqual(re.findall(r'borderFillIDRef="(\d+)"', r), ['32', '29'])  # 나머지: 가는 실선
 
     def test_photo_and_field_end(self):
         _, body = build(spec())

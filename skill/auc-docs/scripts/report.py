@@ -14,6 +14,8 @@ CIRCLE = ''
 ROMAN = 'ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ'
 MAX_APPROVERS, MAX_COOPERATORS = 4, 6
 TABLE_WIDTH = 46216
+HEADING_MIN, HEADING_MAX = 11827, 43000  # 대제목 제목 칸 너비(원본 4글자 기준 ~ 쪽 너비)
+DISTRIBUTE_PARA, CENTER_PARA = '10', '9'  # 원형 표 본문 칸은 균등 분할 → 가운데 정렬로
 
 
 def _runs(value, normal, emphasis):
@@ -46,7 +48,20 @@ def _heading(proto, n, title):
             tc = h.set_tc_text(tc, [('11', title)])
         out.append(p[last:s] + tc)
         last = e
-    return ''.join(out) + p[last:]
+    # 제목 칸(과 아래 밑줄 칸)을 제목 길이에 맞춰 넓혀 한 줄에 들어가게 한다(17pt ≈ 글자당 1700)
+    width = min(HEADING_MAX, max(HEADING_MIN, len(title) * 1750 + 600))
+    return h.widen_cells(''.join(out) + p[last:], {1, 2}, width)
+
+
+def _table(proto, header, rows):
+    """참석자 표 원형: 머리행 / 첫 본문 행(위 이중선) / 나머지 행(가는 실선). 모든 열에 첫 열 칸 모양을 쓴다."""
+    p = h.strip_linesegs(proto)
+    tcs = {re.search(r'colAddr="(\d+)" rowAddr="(\d+)"', p[s:e]).groups(): p[s:e] for s, e in h.tc_spans(p)}
+
+    def centered(tc):
+        return tc.replace('paraPrIDRef="%s"' % DISTRIBUTE_PARA, 'paraPrIDRef="%s"' % CENTER_PARA)
+    return h.build_table(p, header, rows, TABLE_WIDTH, '14', '15', head_tcs=[tcs[('0', '0')]],
+                         body_tcs=[centered(tcs[('0', '1')])], rest_tcs=[centered(tcs[('0', '2')])])
 
 
 def _photo(proto, caption):
@@ -124,7 +139,7 @@ def build_report(spec, template, out):
             elif 'note' in b:
                 body.append(h.clone_para(P['note'], _with_prefix('※ ', b['note'], '31', '31')))
             elif 'table' in b:
-                body.append(h.build_table(P['table'], b['table']['header'], b['table']['rows'], TABLE_WIDTH, '14', '15'))
+                body.append(_table(P['table'], b['table']['header'], b['table']['rows']))
             elif 'photo' in b:
                 body.append(_photo(P['photo'], b['photo']))
             else:
